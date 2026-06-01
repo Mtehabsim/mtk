@@ -1,7 +1,7 @@
 import os
+import sys
 from JailbreakDetector_llama2 import JailbreakDetector
 import torch
-import sys
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import random
@@ -157,18 +157,18 @@ if __name__ == '__main__':
     your_flag = "llama2"
 
     benign_train_set_list = [
-        ["dataset/train_data/databricks-dolly-15k.txt", 300],
-        ["dataset/train_data/alpaca.txt", 300],
-        ["dataset/train_data/non_refusal_prompts_with_responses_80k.txt", 200],
+        ["./datasets/train_data/databricks-dolly-15k.txt", 300],
+        ["./datasets/train_data/alpaca.txt", 300],
+        ["./datasets/train_data/non_refusal_prompts_with_responses_80k.txt", 200],
     ]
     malicious_train_set_list = [
-        ['dataset/AdvBench.txt', 100],
-        ['dataset/MaliciousInstruct.txt', 100],
-        ['dataset/PKU-SafeRLHF-prompts_3-6k.txt', 600],
+        ['./datasets/train_data/AdvBench.txt', 100],
+        ['./datasets/train_data/MaliciousInstruct.txt', 100],
+        ['./datasets/train_data/PKU-SafeRLHF-prompts_3-6k.txt', 600],
     ]
 
     template_name = 'llama-2'
-    attack_dir = "datasets/llama2_test"
+    attack_dir = "./datasets/llama2_test/"
     attack_file_path_list = [os.path.join(attack_dir, attack_key) for attack_key in os.listdir(attack_dir)]
 
     model_path = "model/llama2/"

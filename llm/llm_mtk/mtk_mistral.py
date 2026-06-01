@@ -1,7 +1,7 @@
 import os
+import sys
 from JailbreakDetector_mistral import JailbreakDetector
 import torch
-import sys
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import random
@@ -166,22 +166,22 @@ if __name__ == '__main__':
     target_layers_indices = list(range(0, 32))
 
     benign_train_set_list = [
-        ["dataset/train_data/databricks-dolly-15k.txt", 300],
-        ["dataset/train_data/alpaca.txt", 300],
-        ["dataset/train_data/non_refusal_prompts_with_responses_80k.txt", 200],
+        ["./datasets/train_data/databricks-dolly-15k.txt", 300],
+        ["./datasets/train_data/alpaca.txt", 300],
+        ["./datasets/train_data/non_refusal_prompts_with_responses_80k.txt", 200],
     ]
     malicious_train_set_list = [
-        ['dataset/train_data/AdvBench.txt', 100],
-        ['dataset/train_data/MaliciousInstruct.txt', 100],
-        ['dataset/train_data/PKU-SafeRLHF-prompts_3-6k.txt', 600],
+        ['./datasets/train_data/AdvBench.txt', 100],
+        ['./datasets/train_data/MaliciousInstruct.txt', 100],
+        ['./datasets/train_data/PKU-SafeRLHF-prompts_3-6k.txt', 600],
     ]
 
 
     template_name = 'mistral'
-    attack_dir = "datasets/mistral_test/"
+    attack_dir = "./datasets/mistral_test/"
     attack_file_path_list = [os.path.join(attack_dir, attack_key) for attack_key in os.listdir(attack_dir)]
 
-    model_path = "model/mistral_7b/"
+    model_path = "./model/mistral_7b/"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
