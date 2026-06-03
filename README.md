@@ -61,6 +61,52 @@ Place datasets in the specified paths (modify paths in `load_datasets.py`):
 |[JailBreakV_28K](https://huggingface.co/datasets/JailbreakV-28K/JailBreakV-28k)|./datasets/JailBreakV_28K|Malicious samples (testing)|
 |[USB-Overrefusal](https://huggingface.co/datasets/cgjacklin/USB/tree/main)|./datasets/MM-SafetyBench|Benign samples (testing)|
 
+>You can use download_vlm_dataset.sh to quickly download these datasets.
+
+The paths of the datasets should be organized as follows:
+
+
+```text
+datasets/
+└── datasets/
+    ├── vqa/
+    │   ├── OpenEnded_mscoco_test2015_questions.json
+    │   └── test2015/
+    │
+    ├── usb/
+    │   ├── overfuse_data.csv
+    │   └── img/
+    │        └──overrefusal_eval
+    │        └──vulnerability_eval
+    │ 
+    │
+    ├── mm-vet-v2/
+    │   ├── mm-vet-v2.json
+    │   └── non_palette_images/
+    │   └── images/    
+    │
+    ├── sd_advbench/
+    │   ├── prompt_img_map.csv
+    │   └── outputs_new/
+    │
+    ├── MM-SafetyBench/
+    │   ├── image/
+    │   └── data/
+    │
+    ├── FigStep/
+    │   └── data/
+    │       └── images/
+    │       └── question/
+    │
+    └── JailBreakV_28K/
+        ├── JailBreakV_28K.csv
+        └── mini_JailBreakV_28K.csv
+        └── RedTeam_2K.csv
+        └── figstep/
+        └── llm_transfer_attack/
+        └── query_related/
+```
+
 ### 2. Model Weights Preparation
 
 Activate the VLM environment and enter the VLM directory:
