@@ -17,13 +17,33 @@
 git clone https://github.com/Rookie143/mtk.git
 cd mtk/vlm
 
+# Create and activate the VLM mtk environment
+conda create -n vlm_mtk python=3.10 -y
+conda activate vlm_mtk
+
 # Install vlm core dependencies
 pip install -r requirements.txt
 
+# Exit the VLM virtual environment 
+conda deactivate
+
+# Create and activate the LLM mtk environment 
+conda create -n llm_mtk python=3.10 -y 
+conda activate llm_mtk
+
 #Install llm core dependencies
-cd mtk/llm/llm_mtk
+cd ../llm/llm_mtk
 pip install -r requirements.txt
 ```
+> Note: Activate the corresponding virtual environment before running the VLM or LLM scripts:
+>
+> ```bash
+> # For VLM experiments
+> conda activate vlm_mtk
+>
+> # For LLM experiments
+> conda activate llm_mtk
+> ```
 
 ## 🚀 VLM_Quick Start
 
@@ -43,11 +63,41 @@ Place datasets in the specified paths (modify paths in `load_datasets.py`):
 
 ### 2. Model Weights Preparation
 
-Download multimodal model weights and place them in the specified paths (modify `from_pretrained` paths in test scripts):
+Activate the VLM environment and enter the VLM directory:
 
-- LLaVA-1.6-Vicuna-7B: `./models/llava-v1.6-vicuna-7b-hf`
+```bash
+conda activate vlm_mtk
+cd mtk/vlm
+```
 
-- Qwen-VL-Chat: `./model/qwen_vl_chat`
+Install the Hugging Face command-line tool:
+
+```bash
+pip install -U huggingface_hub
+```
+
+Download the multimodal model weights from Hugging Face and save them to the paths used by the evaluation scripts:
+
+```bash
+
+# Download LLaVA-1.6-Vicuna-7B
+hf download llava-hf/llava-v1.6-vicuna-7b-hf \
+    --local-dir ./models/llava-v1.6-vicuna-7b-hf
+
+# Download Qwen-VL-Chat
+hf download Qwen/Qwen-VL-Chat \
+    --local-dir ./models/qwen_vl_chat
+```
+
+The downloaded models should be stored at the following locations:
+
+| Model               | Hugging Face Repository                                                                     | Local Path                         |
+| ------------------- | ------------------------------------------------------------------------------------------- |------------------------------------|
+| LLaVA-1.6-Vicuna-7B | [llava-hf/llava-v1.6-vicuna-7b-hf](https://huggingface.co/llava-hf/llava-v1.6-vicuna-7b-hf) | `./models/llava-v1.6-vicuna-7b-hf` |
+| Qwen-VL-Chat        | [Qwen/Qwen-VL-Chat](https://huggingface.co/Qwen/Qwen-VL-Chat)                               | `./models/qwen_vl_chat`            |
+
+If the model paths in the test scripts differ from the paths above, modify the corresponding `from_pretrained` arguments before running the evaluation.
+
 
 ### 3. Run Detection
 
@@ -77,7 +127,7 @@ Place **training datasets** in ./datasets/train_data:
 
 
 
-> ⚠️ Note: All datasets should be converted into a unified .txt format.
+> ⚠️ Note: The required training datasets have already been processed and included in the `./datasets/train_data` directory. No additional dataset conversion or preparation is required.
 
 ----------
 
@@ -110,22 +160,54 @@ This naming convention is required for correct label parsing during evaluation.
 
 ### 3. Model Weights Preparation
 
-Download the following large language model weights and place them under:
+Activate the LLM environment and enter the LLM directory:
 
-`./model`
+```bash
+conda activate llm_mtk
+cd mtk/llm/llm_mtk
+```
 
-Required models:
+Install the Hugging Face command-line tool:
 
--   **Llama2-7b-chat-hf**
-    
--   **Llama3-8b-Instruct**
-    
--   **Mistral-7b-instruct-v0.2**
-    
--   **Vicuna-7b-v1.5**
-    
+```bash
+pip install -U huggingface_hub
+```
 
-Each model should be stored in its own subdirectory following the Hugging Face standard structure.
+Download the required model weights:
+
+```bash
+# Download Llama2-7b-chat-hf
+hf download meta-llama/Llama-2-7b-chat-hf \
+    --local-dir ./model/Llama2
+
+# Download Llama3-8b-Instruct
+hf download meta-llama/Meta-Llama-3-8B-Instruct \
+    --local-dir ./model/llama3
+
+# Download Mistral-7b-instruct-v0.2
+hf download mistralai/Mistral-7B-Instruct-v0.2 \
+    --local-dir ./model/mistral_7b
+
+# Download Vicuna-7b-v1.5
+hf download lmsys/vicuna-7b-v1.5 \
+    --local-dir ./model/vicuna-7b-v1_5
+```
+
+After downloading, the model weights should be organized as follows:
+
+```text
+mtk/
+└── llm/
+    └── llm_mtk/
+        └── model/
+            ├── Llama2/
+            ├── llama3/
+            ├── mistral_7b/
+            └── vicuna-7b-v1_5/
+```
+
+Each model is stored in its own subdirectory following the Hugging Face standard structure. If the model paths configured in the evaluation scripts differ from the paths above, modify the corresponding local paths before running the scripts.
+
 
 
 ### 4. Run Detection

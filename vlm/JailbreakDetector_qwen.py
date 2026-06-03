@@ -47,7 +47,7 @@ class JailbreakDetector:
         chat_format = "chatml",
     ):
         """
-        Create context tokens for chat model input
+        Create context tokens for chat models input
         Args:
             tokenizer: Model tokenizer
             query: Current user query
