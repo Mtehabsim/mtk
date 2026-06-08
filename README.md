@@ -1,4 +1,7 @@
-# MTK
+# MTK: Defending LLMs Against Jailbreak Attacks via Manifold Trajectory Kinetics
+
+Official implementation of our USENIX Security 2026 paper:
+**Defending Jailbreak Attacks on Large Language Models via Manifold Trajectory Kinetics (MTK)**.
 
 ## 📋 Environment Requirements
 
