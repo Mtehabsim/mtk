@@ -3,6 +3,8 @@
 Official implementation of our USENIX Security 2026 paper:
 **Defending Jailbreak Attacks on Large Language Models via Manifold Trajectory Kinetics (MTK)**.
 
+![Uploading 1~)(@9872}TIZ~37KZME4GS.png…]()
+
 ## 📋 Environment Requirements
 
 ### Basic Environment
