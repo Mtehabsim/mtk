@@ -9,7 +9,7 @@ import os
 print("=== Phase 1: Empirical Validation of Hyperbolic MTK Assumptions ===")
 
 # 1. Load the Data
-data_path = "./llama3/saved_features_and_labels.pt"
+data_path = "./llama3_hyperbolic/saved_features_and_labels.pt"
 if not os.path.exists(data_path):
     print(f"Error: {data_path} not found. You must run extract_trainset_hiddenstates first!")
     exit(1)
@@ -59,6 +59,7 @@ def calc_lorentz_distance_matrix(X):
     return np.arccosh(-minkowski)
 
 dist_matrix_lorentz = calc_lorentz_distance_matrix(X_lorentz)
+np.fill_diagonal(dist_matrix_lorentz, 0.0)
 
 # 6. Static Neighborhood Purity (Silhouette Score)
 print("\n[Step 4] Calculating Static Neighborhood Purity (Silhouette Score)")

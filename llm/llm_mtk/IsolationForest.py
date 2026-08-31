@@ -347,12 +347,14 @@ class PyTorchIsolationForest(nn.Module):
 
     def decision_function(self, X):
         
-        check_is_fitted(self)
+        if not self.estimators_:
+            raise RuntimeError("Estimator not fitted, call `fit` before `decision_function`.")
         return self.score_samples(X) - self.offset_
 
     def score_samples(self, X):
         
-        check_is_fitted(self)
+        if not self.estimators_:
+            raise RuntimeError("Estimator not fitted, call `fit` before `score_samples`.")
         
         if not isinstance(X, torch.Tensor):
             X = torch.tensor(X, dtype=torch.float32, device=self.estimators_[0]['tree']['node_id'])

@@ -67,7 +67,8 @@ class JailbreakDetector:
                 input_ids = self.tokenizer.apply_chat_template(
                     messages,
                     add_generation_prompt=True,
-                    return_tensors="pt"
+                    return_tensors="pt",
+                    return_dict=False
                 ).to(self.device)
             elif input_ids is not None:
                 input_ids = input_ids.to(self.device)
