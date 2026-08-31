@@ -30,16 +30,17 @@ class JailbreakDetector:
         lorentz_activations = torch.empty((num_samples, self.num_layers, pca_dim + 1), device=self.device)
         
         for l in range(self.num_layers):
-            pca = PCA(n_components=pca_dim, whiten=True)
+            pca = PCA(n_components=pca_dim, whiten=False)
             # Fit PCA on this layer's data
             layer_data = background_layered_activations[:, l, :].cpu().numpy()
-            layer_whitened = pca.fit_transform(layer_data)
+            layer_pca = pca.fit_transform(layer_data)
             self.pca_models.append(pca)
             
-            # Map to Lorentz space (add time coordinate t = sqrt(1 + ||x||^2))
-            layer_whitened_tensor = torch.tensor(layer_whitened, device=self.device, dtype=torch.float32)
-            time_coords = torch.sqrt(1 + torch.sum(layer_whitened_tensor**2, dim=1, keepdim=True))
-            lorentz_activations[:, l, :] = torch.cat([time_coords, layer_whitened_tensor], dim=1)
+            # Apply scale factor and map to Lorentz space (add time coordinate t = sqrt(1 + ||x||^2))
+            layer_scaled = layer_pca * 15.0
+            layer_scaled_tensor = torch.tensor(layer_scaled, device=self.device, dtype=torch.float32)
+            time_coords = torch.sqrt(1 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
+            lorentz_activations[:, l, :] = torch.cat([time_coords, layer_scaled_tensor], dim=1)
             
         self.background_activations_by_layer = lorentz_activations
         # ================================================================
@@ -82,14 +83,15 @@ class JailbreakDetector:
             new_activations = self.get_last_token_hidden_states(input_ids)
 
             # === HYPERBOLIC MTK CHANGE 2: Project Test Prompt ===
-            # Apply the same PCA whitening and Lorentz mapping to the test prompt
+            # Apply the same PCA transformation and Lorentz scaling to the test prompt
             new_activations_lorentz = torch.empty((self.num_layers, 64 + 1), device=self.device)
             for l in range(self.num_layers):
                 layer_data = new_activations[l].unsqueeze(0).cpu().numpy()
-                layer_whitened = self.pca_models[l].transform(layer_data)
-                layer_whitened_tensor = torch.tensor(layer_whitened, device=self.device, dtype=torch.float32)
-                time_coord = torch.sqrt(1 + torch.sum(layer_whitened_tensor**2, dim=1, keepdim=True))
-                new_activations_lorentz[l] = torch.cat([time_coord, layer_whitened_tensor], dim=1).squeeze(0)
+                layer_pca = self.pca_models[l].transform(layer_data)
+                layer_scaled = layer_pca * 15.0
+                layer_scaled_tensor = torch.tensor(layer_scaled, device=self.device, dtype=torch.float32)
+                time_coord = torch.sqrt(1 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
+                new_activations_lorentz[l] = torch.cat([time_coord, layer_scaled_tensor], dim=1).squeeze(0)
             
             new_activations = new_activations_lorentz
             # =====================================================
