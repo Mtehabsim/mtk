@@ -65,15 +65,34 @@ def calc_lorentz_distance_matrix(X):
 dist_matrix_lorentz = calc_lorentz_distance_matrix(X_lorentz)
 np.fill_diagonal(dist_matrix_lorentz, 0.0)
 
-# 6. Static Neighborhood Purity (Silhouette Score)
-print("\n[Step 4] Calculating Static Neighborhood Purity (Silhouette Score)")
-euclidean_score = silhouette_score(X_raw, labels, metric='euclidean')
-hyperbolic_score = silhouette_score(dist_matrix_lorentz, labels, metric='precomputed')
+# 6. Static Neighborhood Purity (K-NN Purity for k=10)
+# Note: Silhouette score fails in Hyperbolic space because it uses average distances,
+# and Hyperbolic space expands exponentially, causing intra-cluster distances to look huge.
+# MTK uses K-Nearest Neighbors (K-NN), so we must measure K-NN Purity!
+print("\n[Step 4] Calculating Static Neighborhood Purity (K-NN Purity, k=10)")
+def knn_purity(dist_mat, labels, k=10):
+    n = dist_mat.shape[0]
+    correct = 0
+    for i in range(n):
+        # Find k nearest neighbors (excluding self, which is distance 0)
+        # argsort sorts ascending. Index 0 is self. Indices 1 to k are neighbors.
+        neighbors = np.argsort(dist_mat[i])[1:k+1]
+        neighbor_labels = labels[neighbors]
+        # Purity for this point is the fraction of neighbors with the same label
+        correct += np.sum(neighbor_labels == labels[i]) / k
+    return correct / n
 
-print(f"Euclidean Purity: {euclidean_score:.4f}")
-print(f"Hyperbolic (Lorentz) Purity: {hyperbolic_score:.4f}")
-if hyperbolic_score > euclidean_score:
-    print("-> Result: Hyperbolic space successfully pushed the Benign and Malicious anchors further apart!")
+# We need a standard Euclidean distance matrix for the baseline
+from sklearn.metrics import pairwise_distances
+dist_matrix_euclidean = pairwise_distances(X_pca, metric='euclidean')
+
+euclidean_purity = knn_purity(dist_matrix_euclidean, labels, k=10)
+hyperbolic_purity = knn_purity(dist_matrix_lorentz, labels, k=10)
+
+print(f"Euclidean K-NN Purity: {euclidean_purity:.4f}")
+print(f"Hyperbolic (Lorentz) K-NN Purity: {hyperbolic_purity:.4f}")
+if hyperbolic_purity >= euclidean_purity:
+    print("-> Result: Hyperbolic space maintains or improves local neighborhood purity!")
 
 # 7. Gromov's Delta-Hyperbolicity Estimation
 print("\n[Step 5] Estimating Gromov's Delta-Hyperbolicity...")
