@@ -21,24 +21,18 @@ class JailbreakDetector:
         # and then projecting the vectors into the Lorentz Hyperboloid model.
         print("Applying PCA Whitening and mapping to Lorentz space...")
         self.num_layers = len(background_layered_activations[0]) if isinstance(background_layered_activations, list) else background_layered_activations.shape[1]
-        
-        self.pca_models = []
-        pca_dim = 64 # Reduce from 4096 to 64
-        
-        # We need to map shape (1600, 32, 4096) to (1600, 32, pca_dim + 1)
+        # === HYPERBOLIC MTK CHANGE 1: Lorentz Projection ===
+        # We discovered PCA 64 removes the high-dimensional signals needed to catch AutoDAN.
+        # We will map the raw 4096 dimensions directly to the Lorentz Manifold.
         num_samples = background_layered_activations.shape[0]
-        lorentz_activations = torch.empty((num_samples, self.num_layers, pca_dim + 1), device=self.device)
+        orig_dim = background_layered_activations.shape[2]
+        lorentz_activations = torch.empty((num_samples, self.num_layers, orig_dim + 1), device=self.device)
         
         for l in range(self.num_layers):
-            pca = PCA(n_components=pca_dim, whiten=False)
-            # Fit PCA on this layer's data
-            layer_data = background_layered_activations[:, l, :].cpu().numpy()
-            layer_pca = pca.fit_transform(layer_data)
-            self.pca_models.append(pca)
+            layer_data = background_layered_activations[:, l, :].to(dtype=torch.float32)
             
-            # Apply scale factor and map to Lorentz space (add time coordinate t = sqrt(1 + ||x||^2))
-            layer_scaled = layer_pca * 15.0
-            layer_scaled_tensor = torch.tensor(layer_scaled, device=self.device, dtype=torch.float32)
+            # Apply scale factor and map to Lorentz space
+            layer_scaled_tensor = layer_data * 15.0
             time_coords = torch.sqrt(1 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
             lorentz_activations[:, l, :] = torch.cat([time_coords, layer_scaled_tensor], dim=1)
             
@@ -83,13 +77,12 @@ class JailbreakDetector:
             new_activations = self.get_last_token_hidden_states(input_ids)
 
             # === HYPERBOLIC MTK CHANGE 2: Project Test Prompt ===
-            # Apply the same PCA transformation and Lorentz scaling to the test prompt
-            new_activations_lorentz = torch.empty((self.num_layers, 64 + 1), device=self.device)
+            # Map raw 4096 dimensions to Lorentz space
+            orig_dim = new_activations[0].shape[-1]
+            new_activations_lorentz = torch.empty((self.num_layers, orig_dim + 1), device=self.device)
             for l in range(self.num_layers):
-                layer_data = new_activations[l].unsqueeze(0).cpu().numpy()
-                layer_pca = self.pca_models[l].transform(layer_data)
-                layer_scaled = layer_pca * 15.0
-                layer_scaled_tensor = torch.tensor(layer_scaled, device=self.device, dtype=torch.float32)
+                layer_data = new_activations[l].unsqueeze(0).to(dtype=torch.float32)
+                layer_scaled_tensor = layer_data * 15.0
                 time_coord = torch.sqrt(1 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
                 new_activations_lorentz[l] = torch.cat([time_coord, layer_scaled_tensor], dim=1).squeeze(0)
             
