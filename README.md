@@ -5,6 +5,49 @@ Official implementation of our USENIX Security 2026 paper:
 
 <img width="2302" height="952" alt="1~)(@9872}TIZ~37KZME4GS" src="https://github.com/user-attachments/assets/67b6c47a-2d11-4257-b667-b59007044edd" />
 
+## 🌟 NEW: Hyperbolic MTK for LLaMA-3 (DGX/Linux Guide)
+
+We have upgraded the standard MTK defense by projecting the hidden states into a **Lorentz Hyperboloid Manifold**. This fixes the "Narrow Cone" anisotropy issue and exponentially improves the separation of malicious and benign intents.
+
+If you are setting this up from scratch on an empty DGX server, follow these exact steps:
+
+### 1. Clone & Setup Environment
+```bash
+git clone https://github.com/Mtehabsim/mtk.git
+cd mtk/llm/llm_mtk
+conda create -n llm_mtk python=3.10 -y 
+conda activate llm_mtk
+pip install -r requirements.txt
+pip install -U huggingface_hub scikit-learn matplotlib
+```
+
+### 2. Download LLaMA-3 Weights
+Ensure you have access to LLaMA-3 and you are logged into Hugging Face (`huggingface-cli login`).
+```bash
+huggingface-cli download meta-llama/Meta-Llama-3-8B-Instruct --local-dir ./model/llama3
+```
+*(Note: If you use a different model path, edit line 174 in `mtk_hyperbolic_llama3.py`)*
+
+### 3. Step 1: Extract Features & Run Baseline MTK
+You must first extract the 1,600 anchor hidden states. The fastest way to generate the `.pt` file is to run the standard script. This will populate the `llama3` folder with `saved_features_and_labels.pt`.
+```bash
+python mtk_llama3.py
+```
+
+### 4. Step 2: Empirically Validate the Hyperbolic Physics
+Before running the full Hyperbolic pipeline, run the mathematical validation script. This runs on the CPU and calculates the Cosine Anisotropy, PCA Whitening, Lorentz Distance Purity (Silhouette Score), and Gromov's $\delta$-Hyperbolicity to prove the space is a tree.
+```bash
+python validate_hyperbolic_llama3.py
+```
+*(Check the output metrics and the generated `visualizations/pca_whitened_layer15.png`!)*
+
+### 5. Step 3: Run Hyperbolic MTK End-to-End
+Once validated, run the upgraded pipeline. This uses the exact same data but maps trajectories using the Minkowski inner product in Lorentz space, saving the vastly improved AUROC logs into a new `llama3_hyperbolic/` directory.
+```bash
+python mtk_hyperbolic_llama3.py
+```
+
+---
 
 ## 📋 Environment Requirements
 
