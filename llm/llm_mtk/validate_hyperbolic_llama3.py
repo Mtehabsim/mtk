@@ -31,17 +31,21 @@ print(f"Average Cosine Similarity (Raw): {avg_cos_sim:.4f}")
 if avg_cos_sim > 0.90:
     print("-> Result: High Anisotropy detected. The vectors are clustered in a narrow cone. Whitening is required.")
 
-# 3. PCA Whitening & Dimensionality Reduction
+# 3. PCA Without Whitening (Preserve the safety axis!)
 pca_dim = 64
-pca = PCA(n_components=pca_dim, whiten=True)
-X_whitened = pca.fit_transform(X_raw)
+pca = PCA(n_components=pca_dim, whiten=False)  # <-- Changed to False
+X_pca = pca.fit_transform(X_raw)
 
-print(f"\n[Step 2] Applied PCA Whitening. Reduced from 4096 to {pca_dim} dimensions.")
+print(f"\n[Step 2] Applied PCA. Reduced from 4096 to {pca_dim} dimensions.")
 
-# 4. Project to Lorentz Model
+# 4. Project to Lorentz Model with a Scale Factor
+# We multiply by a scalar to push the points outward into the exponential space
+scale_factor = 5.0  # <-- Try 1.0, 5.0, or 10.0 to see what separates them best
+X_scaled = X_pca * scale_factor
+
 # Add the time coordinate t = sqrt(1 + ||x||^2)
-time_coords = np.sqrt(1 + np.sum(X_whitened**2, axis=1, keepdims=True))
-X_lorentz = np.hstack((time_coords, X_whitened))
+time_coords = np.sqrt(1 + np.sum(X_scaled**2, axis=1, keepdims=True))
+X_lorentz = np.hstack((time_coords, X_scaled))
 
 # 5. Lorentz Distance Matrix
 print("\n[Step 3] Calculating Lorentz Distance Matrix...")
