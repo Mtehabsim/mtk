@@ -40,7 +40,7 @@ print(f"\n[Step 2] Applied PCA. Reduced from 4096 to {pca_dim} dimensions.")
 
 # 4. Project to Lorentz Model with a Scale Factor
 # We multiply by a scalar to push the points outward into the exponential space
-scale_factor = 5.0  # <-- Try 1.0, 5.0, or 10.0 to see what separates them best
+scale_factor = 15.0  # <-- Increased to push vectors deeper into hyperbolic space
 X_scaled = X_pca * scale_factor
 
 # Add the time coordinate t = sqrt(1 + ||x||^2)
@@ -106,8 +106,11 @@ print("\n[Step 6] Saving Visualizations...")
 os.makedirs("visualizations", exist_ok=True)
 plt.figure(figsize=(8, 6))
 colors = ['green' if l == 0 else 'red' for l in labels]
-plt.scatter(X_whitened[:, 0], X_whitened[:, 1], c=colors, alpha=0.5, s=10)
-plt.title(f"PCA-Whitened Representations (Layer {target_layer})")
-plt.savefig("visualizations/pca_whitened_layer15.png")
-print("Saved scatter plot to visualizations/pca_whitened_layer15.png")
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=colors, alpha=0.5, s=10)
+plt.title(f"PCA Representations (Layer {target_layer})")
+try:
+    plt.savefig("visualizations/pca_layer15.png")
+    print("Saved scatter plot to visualizations/pca_layer15.png")
+except Exception as e:
+    print(f"Warning: Could not save visualization due to error: {e}")
 print("\nValidation Complete. If metrics look good, you are ready to run the pipeline!")
