@@ -67,7 +67,8 @@ print(f"{'L':<3} | {'Cos Sim':<7} | {'Euc(4K)':<8} | {'Hyp(4K)':<8} | {'Euc(64)'
 print("-" * 90)
 
 for l in range(num_layers):
-    X_raw = activations[:, l, :].numpy()
+    # CRITICAL FIX: Cast to float64 before converting to numpy to prevent float16 overflow!
+    X_raw = activations[:, l, :].to(dtype=torch.float64).numpy()
     
     # 1. Cosine Similarity
     avg_cos_sim = np.mean(cosine_similarity(X_raw))
