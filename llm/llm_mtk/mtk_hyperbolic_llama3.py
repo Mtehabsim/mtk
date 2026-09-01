@@ -14,7 +14,7 @@ try:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from utils.string_utils import load_conversation_template, autodan_SuffixManager
 except ImportError as e:
-    sys.exit(1)
+    raise e
 
 def list_available_attacks(attack_dir):
     if not os.path.isdir(attack_dir):
