@@ -38,6 +38,22 @@ def knn_purity(dist_mat, labels, k=10):
         correct += np.sum(neighbor_labels == labels[i]) / k
     return correct / n
 
+def estimate_gromov_delta(dist_mat, num_samples=2000):
+    N = dist_mat.shape[0]
+    deltas = []
+    for _ in range(num_samples):
+        p = np.random.choice(N, 4, replace=False)
+        x, y, z, w = p[0], p[1], p[2], p[3]
+        sums = [
+            dist_mat[x, y] + dist_mat[z, w],
+            dist_mat[x, z] + dist_mat[y, w],
+            dist_mat[x, w] + dist_mat[y, z]
+        ]
+        sums.sort()
+        delta = (sums[2] - sums[1]) / 2.0
+        deltas.append(delta)
+    return np.mean(deltas)
+
 # We will track 4 metrics across all 32 layers
 purity_euc_4096 = []
 purity_hyp_4096 = []
@@ -47,8 +63,8 @@ cosine_similarities = []
 
 scale_factor = 15.0
 
-print(f"{'Layer':<5} | {'Cos Sim':<8} | {'Euc(4096)':<10} | {'Hyp(4096)':<10} | {'Euc(64)':<10} | {'Hyp(64)':<10}")
-print("-" * 70)
+print(f"{'L':<3} | {'Cos Sim':<7} | {'Euc(4K)':<8} | {'Hyp(4K)':<8} | {'Euc(64)':<8} | {'Hyp(64)':<8} | {'Δ Euc(4K)':<9} | {'Δ Hyp(64)':<9}")
+print("-" * 90)
 
 for l in range(num_layers):
     X_raw = activations[:, l, :].numpy()
@@ -86,7 +102,10 @@ for l in range(num_layers):
     purity_euc_64.append(p_euc_64)
     purity_hyp_64.append(p_hyp_64)
     
-    print(f"{l:<5} | {avg_cos_sim:.4f}   | {p_euc_4096:.4f}     | {p_hyp_4096:.4f}     | {p_euc_64:.4f}     | {p_hyp_64:.4f}")
+    delta_euc_4096 = estimate_gromov_delta(dist_matrix_euc_4096, 2000)
+    delta_hyp_64 = estimate_gromov_delta(dist_matrix_hyp_64, 2000)
+    
+    print(f"{l:<3} | {avg_cos_sim:.4f}  | {p_euc_4096:.4f}   | {p_hyp_4096:.4f}   | {p_euc_64:.4f}   | {p_hyp_64:.4f}   | {delta_euc_4096:.4f}     | {delta_hyp_64:.4f}")
 
 # 4. Create the Line Graph
 os.makedirs("visualizations", exist_ok=True)
