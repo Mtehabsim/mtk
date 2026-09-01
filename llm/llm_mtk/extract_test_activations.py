@@ -13,16 +13,21 @@ except ImportError as e:
     raise e
 
 def load_prompts_from_attack_json(file_path):
-    prompts_with_labels = []
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-        if "benign_prompts" in data:
-            for prompt in data["benign_prompts"]:
-                prompts_with_labels.append({"prompt": prompt, "true_label": 0})
-        if "jailbreak_prompts" in data:
-            for prompt in data["jailbreak_prompts"]:
-                prompts_with_labels.append({"prompt": prompt, "true_label": 1})
-    return prompts_with_labels
+    prompts = []
+    true_label = int(file_path.split("/")[-1][-6])
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        with open(file_path, 'r', encoding='gbk', errors='ignore') as f:
+            data = json.load(f)
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        prompt = item.get('jailbreak')
+        if prompt and isinstance(prompt, str):
+            prompts.append({"prompt": prompt, "true_label": true_label})
+    return prompts
 
 def main():
     model_name_or_path = "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -71,7 +76,7 @@ def main():
         attack_key = os.path.splitext(os.path.basename(attack_file_path))[0]
         
         if attack_key.startswith("autodan"):
-            with open(attack_file_path, 'r', encoding='utf-8') as f:
+            with open(attack_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 autodan_data = json.load(f)
             if not isinstance(autodan_data, list):
                 continue
