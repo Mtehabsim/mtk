@@ -22,20 +22,23 @@ class JailbreakDetector:
         print("Applying PCA Whitening and mapping to Lorentz space...")
         self.num_layers = len(background_layered_activations[0]) if isinstance(background_layered_activations, list) else background_layered_activations.shape[1]
         num_samples = background_layered_activations.shape[0]
-        pca_dim = 64
-        self.pca_models = []
-        euclidean_activations = torch.empty((num_samples, self.num_layers, pca_dim), device=self.device)
+        # === HYPERBOLIC MTK CHANGE 1: Lorentz Projection (Float64) ===
+        # We must use float64 because 4096 dimensions * 15.0^2 = ~1,000,000.
+        # Subtracting ~1,000,000 in Minkowski math causes catastrophic cancellation in float32!
+        num_samples = background_layered_activations.shape[0]
+        orig_dim = background_layered_activations.shape[2]
+        lorentz_activations = torch.empty((num_samples, self.num_layers, orig_dim + 1), device=self.device, dtype=torch.float64)
         
         for l in range(self.num_layers):
-            pca = PCA(n_components=pca_dim, whiten=False)
-            layer_data = background_layered_activations[:, l, :].cpu().numpy()
-            layer_pca = pca.fit_transform(layer_data)
-            self.pca_models.append(pca)
+            # Crucial: Cast to float64 immediately
+            layer_data = background_layered_activations[:, l, :].to(dtype=torch.float64)
             
-            # Store standard PCA 64 vectors (No Lorentz time coordinate)
-            euclidean_activations[:, l, :] = torch.tensor(layer_pca, device=self.device, dtype=torch.float32)
+            # Apply scale factor and map to Lorentz space
+            layer_scaled_tensor = layer_data * 15.0
+            time_coords = torch.sqrt(1.0 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
+            lorentz_activations[:, l, :] = torch.cat([time_coords, layer_scaled_tensor], dim=1)
             
-        self.background_activations_by_layer = euclidean_activations
+        self.background_activations_by_layer = lorentz_activations
         # ================================================================
         
         self.background_labels = all_labels
@@ -75,14 +78,16 @@ class JailbreakDetector:
 
             new_activations = self.get_last_token_hidden_states(input_ids)
 
-            # === TEST 4: Euclidean PCA 64 ===
-            new_activations_euclidean = torch.empty((self.num_layers, 64), device=self.device)
+            # === HYPERBOLIC MTK CHANGE 2: Project Test Prompt (Float64) ===
+            orig_dim = new_activations[0].shape[-1]
+            new_activations_lorentz = torch.empty((self.num_layers, orig_dim + 1), device=self.device, dtype=torch.float64)
             for l in range(self.num_layers):
-                layer_data = new_activations[l].unsqueeze(0).cpu().numpy()
-                layer_pca = self.pca_models[l].transform(layer_data)
-                new_activations_euclidean[l] = torch.tensor(layer_pca, device=self.device, dtype=torch.float32).squeeze(0)
+                layer_data = new_activations[l].unsqueeze(0).to(dtype=torch.float64)
+                layer_scaled_tensor = layer_data * 15.0
+                time_coord = torch.sqrt(1.0 + torch.sum(layer_scaled_tensor**2, dim=1, keepdim=True))
+                new_activations_lorentz[l] = torch.cat([time_coord, layer_scaled_tensor], dim=1).squeeze(0)
             
-            new_activations = new_activations_euclidean
+            new_activations = new_activations_lorentz
             # =====================================================
 
             ranks = self._calculate_single_rank_k_nb(
@@ -158,10 +163,22 @@ class JailbreakDetector:
                                     device):
         test_vector = test_vector.unsqueeze(0)
 
-        # === TEST 4: Euclidean Distance ===
-        # Reverting back to standard Euclidean distance to test PCA 64 without Hyperbolic geometry
-        test_expanded = test_vector.expand(background_vectors.shape[0], -1, -1)
-        layer_distances = torch.norm(test_expanded - background_vectors, p=2, dim=2).permute(1, 0)
+        # === HYPERBOLIC MTK CHANGE 3: Minkowski Distance (Float64) ===
+        # The variables test_vector and background_vectors are already float64.
+        # Time coordinate is at index 0, Space coordinates at index 1:
+        u0 = background_vectors[:, :, 0]
+        v0 = test_vector[:, :, 0]
+        u_space = background_vectors[:, :, 1:]
+        v_space = test_vector[:, :, 1:]
+        
+        # Minkowski product: -u0*v0 + sum(u_i * v_i)
+        minkowski_product = -(u0 * v0) + torch.sum(u_space * v_space, dim=2)
+        
+        # Clamp to -1.0 to avoid NaNs
+        minkowski_product = torch.clamp(minkowski_product, max=-1.0)
+        
+        # Lorentz Distance formula
+        layer_distances = torch.acosh(-minkowski_product).permute(1, 0)
         # ========================================================================
 
         sorted_indices = torch.argsort(layer_distances, dim=1)
