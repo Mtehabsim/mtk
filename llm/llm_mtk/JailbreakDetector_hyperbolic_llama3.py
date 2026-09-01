@@ -21,6 +21,7 @@ class JailbreakDetector:
         # and then projecting the vectors into the Lorentz Hyperboloid model.
         print("Applying PCA Whitening and mapping to Lorentz space...")
         self.num_layers = len(background_layered_activations[0]) if isinstance(background_layered_activations, list) else background_layered_activations.shape[1]
+        num_samples = background_layered_activations.shape[0]
         pca_dim = 64
         self.pca_models = []
         euclidean_activations = torch.empty((num_samples, self.num_layers, pca_dim), device=self.device)
