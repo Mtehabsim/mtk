@@ -72,16 +72,7 @@ DEFAULT_SCALE = 15.0
 # Geometry primitives (bipartite: test points scored against a FIXED
 # reference bank, not against each other)
 # --------------------------------------------------------------------------
-def lift(X, ref_mean_norm, scale):
-    """Lift points onto the hyperboloid, normalized by the REFERENCE bank's
-    mean norm (not the test batch's own norm) so a given scale means the
-    same thing regardless of which test batch you're scoring, and so
-    reference and test points are lifted consistently."""
-    X_norm = X / ref_mean_norm
-    X_scaled = X_norm * scale
-    time = np.sqrt(1 + np.sum(X_scaled ** 2, axis=1, keepdims=True))
-    return time, X_scaled
-
+from sklearn.decomposition import PCA
 
 def euclidean_bipartite(X_test, X_ref):
     # ||a-b||^2 = ||a||^2 + ||b||^2 - 2 a.b, vectorized
@@ -91,11 +82,32 @@ def euclidean_bipartite(X_test, X_ref):
     return np.sqrt(d2)
 
 
-def hyperbolic_bipartite(X_test, X_ref, scale):
-    ref_mean_norm = np.mean(np.linalg.norm(X_ref, axis=1))
-    t_test, s_test = lift(X_test, ref_mean_norm, scale)
-    t_ref, s_ref = lift(X_ref, ref_mean_norm, scale)
-    mink = -np.outer(t_test.ravel(), t_ref.ravel()) + s_test @ s_ref.T
+def true_exponential_map(X, C=0.2):
+    X_scaled = X * C
+    norms = np.linalg.norm(X_scaled, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1e-8, norms)
+    time_coords = np.cosh(norms)
+    space_coords = X_scaled * (np.sinh(norms) / norms)
+    return np.hstack((time_coords, space_coords))
+
+
+def hyperbolic_bipartite(X_test, X_ref):
+    # Fit PCA 64 (Whitened) on Reference Bank
+    pca = PCA(n_components=64, whiten=True)
+    X_ref_pca = pca.fit_transform(X_ref)
+    X_test_pca = pca.transform(X_test)
+    
+    # Apply True Exponential Map
+    lorentz_ref = true_exponential_map(X_ref_pca)
+    lorentz_test = true_exponential_map(X_test_pca)
+    
+    # Minkowski inner product
+    t_test = lorentz_test[:, 0]
+    s_test = lorentz_test[:, 1:]
+    t_ref = lorentz_ref[:, 0]
+    s_ref = lorentz_ref[:, 1:]
+    
+    mink = -np.outer(t_test, t_ref) + s_test @ s_ref.T
     mink = np.clip(mink, a_max=-1.0, a_min=None)
     return np.arccosh(-mink)
 
@@ -132,7 +144,7 @@ def build_delta_trajectories(ref_activations, ref_labels, test_activations,
         X_ref = ref_activations[:, l, :]
         X_test = test_activations[:, l, :]
         d_euc = euclidean_bipartite(X_test, X_ref)
-        d_hyp = hyperbolic_bipartite(X_test, X_ref, scales_per_layer[l])
+        d_hyp = hyperbolic_bipartite(X_test, X_ref)
         delta_euc[:, l] = rank_delta(d_euc, ref_labels)
         delta_hyp[:, l] = rank_delta(d_hyp, ref_labels)
     return delta_euc, delta_hyp
