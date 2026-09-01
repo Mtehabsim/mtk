@@ -114,16 +114,25 @@ for l in range(num_layers):
     hub_euc_4096.append(h_euc_4096)
     hub_hyp_4096.append(h_hyp_4096)
     
-    # 3. PCA 64 Dimensions
-    pca = PCA(n_components=64, whiten=False)
+    # 3. PCA 64 Dimensions (Whitened + Exponential Map)
+    pca = PCA(n_components=64, whiten=True)
     X_pca_64 = pca.fit_transform(X_raw)
     
     dist_matrix_euc_64 = pairwise_distances(X_pca_64, metric='euclidean')
     
-    X_scaled_64 = X_pca_64 * scale_factor
-    time_coords_64 = np.sqrt(1 + np.sum(X_scaled_64**2, axis=1, keepdims=True))
-    X_lorentz_64 = np.hstack((time_coords_64, X_scaled_64))
-    dist_matrix_hyp_64 = calc_lorentz_distance_matrix(X_lorentz_64)
+    # Exponential Map Parameter C
+    C = 0.2 
+    X_scaled_64 = X_pca_64 * C
+
+    norms = np.linalg.norm(X_scaled_64, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1e-8, norms) # Prevent division by zero
+
+    # True Exponential Map to Lorentz Model
+    time_coords_64 = np.cosh(norms)
+    space_coords_64 = X_scaled_64 * (np.sinh(norms) / norms)
+    X_lorentz_64 = np.hstack((time_coords_64, space_coords_64))
+    
+    dist_matrix_hyp_64 = calc_lorentz_distance_matrix(X_lorentz_64) # Geometry is now baked into the coordinates
     
     h_euc_64 = calculate_hubness_skew(dist_matrix_euc_64)
     h_hyp_64 = calculate_hubness_skew(dist_matrix_hyp_64)
